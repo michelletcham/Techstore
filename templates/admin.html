@@ -1,0 +1,211 @@
+<h2>Messages clients</h2>
+<div class="card" style="max-width:600px;margin-bottom:32px;">
+    <div id="admin-chat-list" style="max-height:220px;overflow-y:auto;background:#f7f8fa;padding:12px 0 0 0;"></div>
+    <form id="admin-chat-form" style="display:flex;align-items:center;padding:8px 0 0 0;">
+        <input id="admin-chat-input" type="text" placeholder="Votre réponse..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #c9ada7;margin-right:8px;">
+        <button type="submit" style="background:#4a4e69;color:#fff;border:none;border-radius:8px;padding:8px 16px;">Envoyer</button>
+    </form>
+    <div id="admin-chat-user-select" style="margin-top:8px;"></div>
+</div>
+<script>
+let adminChatUserId = null;
+async function loadAdminChatUsers() {
+    const res = await fetch('/api/chat/messages');
+    const messages = await res.json();
+    // Regrouper par user_id
+    const users = {};
+    messages.forEach(m => {
+        if (!users[m.user_id]) users[m.user_id] = [];
+        users[m.user_id].push(m);
+    });
+    let html = '<b>Conversations :</b> ';
+    Object.keys(users).forEach(uid => {
+        html += `<button onclick="selectAdminChatUser(${uid})" style="margin:2px 6px;${adminChatUserId==uid?'background:#4a4e69;color:#fff;':''}" ${adminChatUserId==uid?'disabled':''}>Utilisateur #${uid}</button>`;
+    });
+    document.getElementById('admin-chat-user-select').innerHTML = html;
+    // Sélection automatique du premier utilisateur si aucun n'est sélectionné
+    if (!adminChatUserId && Object.keys(users).length > 0) {
+        adminChatUserId = Object.keys(users)[0];
+        renderAdminChat(users[adminChatUserId]);
+    } else if (adminChatUserId && users[adminChatUserId]) {
+        renderAdminChat(users[adminChatUserId]);
+    } else if (adminChatUserId && !users[adminChatUserId]) {
+        // Si l'utilisateur sélectionné n'a plus de messages, reset
+        adminChatUserId = null;
+    }
+}
+async function selectAdminChatUser(uid) {
+    adminChatUserId = uid;
+    const res = await fetch('/api/chat/messages');
+    const messages = await res.json();
+    const userMsgs = messages.filter(m => m.user_id == uid);
+    renderAdminChat(userMsgs);
+}
+function renderAdminChat(msgs) {
+    let html = '';
+    msgs.forEach(m => {
+        html += `<div style="margin:6px 0;${m.sender==='admin'?'text-align:right;':''}"><span style="background:${m.sender==='admin'?'#e0e0ff':'#f2e9e4'};padding:7px 12px;border-radius:12px;">${m.sender==='admin'?'Moi':'Client'}: ${m.message}</span></div>`;
+    });
+    document.getElementById('admin-chat-list').innerHTML = html;
+    document.getElementById('admin-chat-list').scrollTop = 99999;
+}
+document.getElementById('admin-chat-form').onsubmit = async function(e) {
+    e.preventDefault();
+    const input = document.getElementById('admin-chat-input');
+    const msg = input.value.trim();
+    if (!msg || !adminChatUserId) return;
+    try {
+        await fetch('/api/chat/send', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ message: msg, user_id: adminChatUserId })
+        });
+        input.value = '';
+        selectAdminChatUser(adminChatUserId);
+    } catch (err) {
+        alert('Erreur lors de l\'envoi du message.');
+    }
+};
+window.addEventListener('DOMContentLoaded', () => {
+    loadAdminChatUsers();
+    setInterval(loadAdminChatUsers, 3000);
+});
+</script>
+</body>
+<h2>Commandes</h2>
+<div class="product-list">
+    {% for order in orders %}
+    <div class="card" style="min-width:260px;max-width:420px;">
+        <h3>Commande #{{ order.id }}</h3>
+        <p>Utilisateur : <strong>{{ order.user.username }}</strong> ({{ order.user.email }})</p>
+        <p>Date : {{ order.created_at.strftime('%d/%m/%Y %H:%M') if order.created_at else '' }}</p>
+        <p>Total : <strong>{{ order.total }} €</strong></p>
+        <form method="post" action="/admin/order-status" style="margin-bottom:8px;">
+            <input type="hidden" name="order_id" value="{{ order.id }}">
+            <label>Statut :</label>
+            <select name="statut">
+                <option value="En cours" {% if order.statut == 'En cours' %}selected{% endif %}>En cours</option>
+                <option value="Expédiée" {% if order.statut == 'Expédiée' %}selected{% endif %}>Expédiée</option>
+                <option value="Livré" {% if order.statut == 'Livré' %}selected{% endif %}>Livré</option>
+                <option value="Annulée" {% if order.statut == 'Annulée' %}selected{% endif %}>Annulée</option>
+            </select>
+            <button type="submit">Changer</button>
+        </form>
+        <p>Retour : <strong>{{ order.retour_statut or 'Aucun' }}</strong></p>
+        <p>Remboursement : <strong>{{ order.remboursement_statut or 'Aucun' }}</strong></p>
+        {% if order.retour_statut and order.retour_statut.startswith('Demandé') %}
+        <form method="post" action="/admin/order-retour-action" style="margin-bottom:8px;">
+            <input type="hidden" name="order_id" value="{{ order.id }}">
+            <label>Action retour :</label>
+            <select name="retour_action">
+                <option value="Accepté">Accepter</option>
+                <option value="Refusé">Refuser</option>
+            </select>
+            <button type="submit">Valider</button>
+        </form>
+        {% endif %}
+        {% if order.retour_statut == 'Accepté' and (not order.remboursement_statut or order.remboursement_statut == 'Aucun') %}
+        <form method="post" action="/admin/order-remboursement-action" style="margin-bottom:8px;">
+            <input type="hidden" name="order_id" value="{{ order.id }}">
+            <label>Action remboursement :</label>
+            <select name="remboursement_action">
+                <option value="Remboursé">Rembourser</option>
+                <option value="Refusé">Refuser</option>
+            </select>
+            <button type="submit">Valider</button>
+        </form>
+        {% endif %}
+        <details>
+            <summary>Voir les articles</summary>
+            <ul>
+            {% for item in order.items %}
+                <li>{{ item.product.name }} x {{ item.quantity }}</li>
+            {% endfor %}
+            </ul>
+        </details>
+    </div>
+    {% endfor %}
+</div>
+<!-- admin.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Techstore By Michelle</title>
+    <link rel="stylesheet" href="/static/bootstrap_custom.css">
+    <link rel="stylesheet" href="/static/modern.css">
+</head>
+<body>
+    <nav style="margin-bottom: 24px;">
+        <a href="/">Accueil</a> |
+        <a href="/products">Produits</a>
+        {% if user %}
+            | <a href="/cart">Panier</a>
+            | <a href="/orders">Commandes</a>
+            | <a href="/logout">Déconnexion</a>
+            {% if user.is_admin %}| <a href="/admin">Admin</a>{% endif %}
+        {% else %}
+            | <a href="/login">Connexion</a>
+            | <a href="/signup">Inscription</a>
+        {% endif %}
+    </nav>
+    <h1>Admin - Techstore By Michelle</h1>
+    <div class="card" style="max-width:420px;margin-bottom:32px;">
+        <h2>Ajouter un produit</h2>
+        <form method="post" action="/admin/add-product" enctype="multipart/form-data">
+            <label>Nom :</label><br>
+            <input type="text" name="name" required><br>
+            <label>Description :</label><br>
+            <input type="text" name="description" required><br>
+            <label>Prix (€) :</label><br>
+            <input type="number" name="price" step="0.01" required><br>
+            <label>Stock :</label><br>
+            <input type="number" name="stock" min="0" required><br>
+            <label>Images/vidéos (max 5) :</label><br>
+            <input type="file" name="media" accept="image/*,video/*" multiple><br>
+            <small>Vous pouvez sélectionner jusqu'à 5 fichiers (images ou vidéos).</small><br>
+            <label>Ou collez des URLs d'images/vidéos externes (une par ligne) :</label><br>
+            <textarea name="media_urls" rows="3" style="width:100%;" placeholder="https://...\nhttps://..."></textarea><br>
+            <small>Vous pouvez mélanger fichiers et URLs, max 5 au total.</small><br><br>
+            <button type="submit">Ajouter</button>
+        </form>
+    </div>
+
+    <h2>Produits existants</h2>
+    <div class="product-list">
+        {% for product in products %}
+        <div class="card product-item">
+            {% if product.image_url %}
+            <img src="{{ product.image_url }}" alt="{{ product.name }}">
+            {% endif %}
+            <h3>{{ product.name }}</h3>
+            <p>{{ product.description }}</p>
+            <p><strong>{{ product.price }} €</strong> | Stock: {{ product.stock }}</p>
+            <a href="/admin/edit-product/{{ product.id }}"><button type="button">Modifier</button></a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2>Utilisateurs</h2>
+    <div class="product-list">
+        {% for u in users %}
+        <div class="card" style="min-width:220px;max-width:320px;">
+            <h3>{{ u.username }}</h3>
+            <p>{{ u.email }}</p>
+            <p>Statut : {% if u.is_admin %}<strong style="color:#4a4e69">Admin</strong>{% else %}Utilisateur{% endif %}</p>
+            {% if not u.is_admin %}
+                <form method="post" action="/admin/promote">
+                    <input type="hidden" name="user_id" value="{{ u.id }}">
+                    <button type="submit">Promouvoir admin</button>
+                </form>
+            {% elif u.id != user.id %}
+                <form method="post" action="/admin/demote">
+                    <input type="hidden" name="user_id" value="{{ u.id }}">
+                    <button type="submit">Rétrograder</button>
+                </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

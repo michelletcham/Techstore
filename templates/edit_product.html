@@ -1,0 +1,50 @@
+<!-- edit_product.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Modifier le produit - Techstore By Michelle</title>
+    <link rel="stylesheet" href="/static/modern.css">
+</head>
+<body>
+    <nav style="margin-bottom: 24px;">
+        <a href="/admin">Retour Admin</a>
+    </nav>
+    <h1>Modifier le produit</h1>
+    <div class="card" style="max-width:520px;">
+        <form method="post" action="/admin/edit-product/{{ product.id }}" enctype="multipart/form-data">
+            <label>Nom :</label><br>
+            <input type="text" name="name" value="{{ product.name }}" required><br>
+            <label>Description :</label><br>
+            <input type="text" name="description" value="{{ product.description }}" required><br>
+            <label>Prix (€) :</label><br>
+            <input type="number" name="price" step="0.01" value="{{ product.price }}" required><br>
+            <label>Stock :</label><br>
+            <input type="number" name="stock" min="0" value="{{ product.stock }}" required><br>
+            <label>Médias actuels :</label><br>
+            {% if product.media and product.media|length > 0 %}
+                <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                {% for m in product.media %}
+                    <div style="text-align:center;">
+                        {% if m.media_type == 'image' %}
+                            <img src="{{ m.media_url }}" alt="media" style="width:80px;max-height:80px;object-fit:cover;"><br>
+                        {% else %}
+                            <video src="{{ m.media_url }}" style="width:80px;max-height:80px;object-fit:cover;" controls></video><br>
+                        {% endif %}
+                        <input type="checkbox" name="delete_media" value="{{ m.id }}"> Supprimer
+                    </div>
+                {% endfor %}
+                </div>
+            {% else %}
+                <em>Aucun média</em><br>
+            {% endif %}
+            <label>Ajouter des images/vidéos (max 5 au total) :</label><br>
+            <input type="file" name="media" accept="image/*,video/*" multiple><br>
+            <label>Ou collez des URLs d'images/vidéos externes (une par ligne) :</label><br>
+            <textarea name="media_urls" rows="3" style="width:100%;" placeholder="https://...\nhttps://..."></textarea><br>
+            <small>Vous pouvez mélanger fichiers et URLs, max 5 au total (en plus des médias existants non supprimés).</small><br><br>
+            <button type="submit">Enregistrer</button>
+        </form>
+    </div>
+</body>
+</html>

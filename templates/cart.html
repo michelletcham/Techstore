@@ -1,0 +1,51 @@
+<!-- cart.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Panier - Techstore By Michelle</title>
+    <link rel="stylesheet" href="/static/bootstrap_custom.css">
+    <link rel="stylesheet" href="/static/modern.css">
+</head>
+<body>
+    <nav style="margin-bottom: 24px;">
+        <a href="/">Accueil</a> |
+        <a href="/products">Produits</a>
+        {% if user %}
+            | <a href="/cart">Panier</a>
+            | <a href="/orders">Commandes</a>
+            | <a href="/logout">Déconnexion</a>
+            {% if user.is_admin %}| <a href="/admin">Admin</a>{% endif %}
+        {% else %}
+            | <a href="/login">Connexion</a>
+            | <a href="/signup">Inscription</a>
+        {% endif %}
+    </nav>
+    <h1>Votre Panier</h1>
+    {% if cart and cart|length > 0 %}
+        <div class="product-list">
+        {% for item in cart %}
+            <div class="card product-item">
+                <h2>{{ item.name }}</h2>
+                <p>{{ item.description }}</p>
+                <p><strong>{{ item.price }} €</strong> x {{ item.quantity }}</p>
+                <form method="post" action="/cart/update" style="margin-bottom:8px;">
+                    <input type="hidden" name="product_id" value="{{ item.id }}">
+                    <input type="number" name="quantity" value="{{ item.quantity }}" min="1">
+                    <button type="submit">Modifier</button>
+                </form>
+                <form method="post" action="/cart/remove">
+                    <input type="hidden" name="product_id" value="{{ item.id }}">
+                    <button type="submit" style="background:#b00020;border-radius:22px;">Supprimer</button>
+                </form>
+            </div>
+        {% endfor %}
+        </div>
+        <form method="post" action="/create-checkout-session">
+            <button type="submit" style="margin-top:24px; font-size:1.2em;">Payer avec Stripe</button>
+        </form>
+    {% else %}
+        <p>Votre panier est vide.</p>
+    {% endif %}
+</body>
+</html>

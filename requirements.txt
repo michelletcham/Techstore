@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+jinja2
+sqlalchemy
+stripe
+python-dotenv
+passlib[bcrypt]
+python-jose
+requests

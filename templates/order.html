@@ -1,0 +1,48 @@
+<!-- order.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Commande - Techstore By Michelle</title>
+    <link rel="stylesheet" href="/static/bootstrap_custom.css">
+    <link rel="stylesheet" href="/static/modern.css">
+</head>
+<body>
+    <nav style="margin-bottom: 24px;">
+        <a href="/">Accueil</a> |
+        <a href="/products">Produits</a>
+        {% if user %}
+            | <a href="/cart">Panier</a>
+            | <a href="/orders">Commandes</a>
+            | <a href="/logout">Déconnexion</a>
+            {% if user.is_admin %}| <a href="/admin">Admin</a>{% endif %}
+        {% else %}
+            | <a href="/login">Connexion</a>
+            | <a href="/signup">Inscription</a>
+        {% endif %}
+    </nav>
+    <h1>Vos Commandes</h1>
+    {% if orders %}
+        <div class="order-list">
+        {% for order in orders %}
+            <div class="card" style="margin-bottom:18px;max-width:420px;">
+                <h3>Commande #{{ order.id }}</h3>
+                <p>Date : {{ order.created_at.strftime('%d/%m/%Y %H:%M') if order.created_at else '' }}</p>
+                <p>Total : <strong>{{ order.total }} €</strong></p>
+                <p>Statut : <strong>{{ order.statut }}</strong></p>
+                <details>
+                    <summary>Voir les articles</summary>
+                    <ul>
+                    {% for item in order.items %}
+                        <li>{{ item.product.name }} x {{ item.quantity }}</li>
+                    {% endfor %}
+                    </ul>
+                </details>
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <p>Aucune commande trouvée.</p>
+    {% endif %}
+</body>
+</html>

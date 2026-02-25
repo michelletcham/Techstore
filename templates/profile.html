@@ -1,0 +1,68 @@
+{% extends "home.html" %}
+{% block content %}
+<div style="display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; gap: 40px; min-height: 400px;">
+    <div style="min-width:350px; max-width:420px;">
+        <h2 style="text-align:left;">Mon Profil</h2>
+        <form method="post" action="/profile">
+            <div class="mb-3">
+                <label for="username" class="form-label">Nom d'utilisateur</label>
+                <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" readonly>
+            </div>
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="address" class="form-label">Adresse</label>
+                <input type="text" class="form-control" id="address" name="address" value="{{ user.address or '' }}">
+            </div>
+            <button type="submit" class="btn btn-primary" style="float:left;">Mettre à jour</button>
+        </form>
+        {% if success %}
+        <div style="color:green; text-align:left; margin-top:10px;">{{ success }}</div>
+        {% endif %}
+    </div>
+    <div style="min-width:350px; max-width:420px;">
+        <h3 style="text-align:left;">Mes commandes</h3>
+        {% if orders %}
+            <div style="max-height:300px; overflow-y:auto;">
+            {% for order in orders %}
+                <div class="card" style="margin-bottom:18px;">
+                    <h4 style="text-align:left;">Commande #{{ order.id }}</h4>
+                    <p style="text-align:left;">Date : {{ order.created_at.strftime('%d/%m/%Y %H:%M') if order.created_at else '' }}</p>
+                    <p style="text-align:left;">Total : <strong>{{ order.total }} €</strong></p>
+                    <p style="text-align:left;">Statut : <strong>{{ order.statut }}</strong></p>
+                    <p style="text-align:left;">Retour : <strong>{{ order.retour_statut or 'Aucun' }}</strong></p>
+                    <p style="text-align:left;">Remboursement : <strong>{{ order.remboursement_statut or 'Aucun' }}</strong></p>
+                    {% if order.statut == 'Livré' and (not order.retour_statut or order.retour_statut == 'Aucun' or order.retour_statut.startswith('Refusé')) %}
+                    <form method="post" action="/orders/{{ order.id }}/retour" style="margin-bottom:8px;">
+                        <input type="hidden" name="order_id" value="{{ order.id }}">
+                        <label for="raison_retour_{{ order.id }}" style="display:block;text-align:left;margin-bottom:4px;">Raison du retour :</label>
+                        <select name="raison_retour" id="raison_retour_{{ order.id }}" required style="margin-bottom:8px;width:100%;padding:4px;">
+                            <option value="">--Choisir une raison--</option>
+                            <option value="Mauvais article">Mauvais article</option>
+                            <option value="Je ne veux plus">Je ne veux plus</option>
+                            <option value="Article trop grand">Article trop grand</option>
+                            <option value="Article trop petit">Article trop petit</option>
+                            <option value="Autre">Autre</option>
+                        </select>
+                        <button type="submit" style="background:#f39c12;color:#fff;padding:6px 16px;border:none;border-radius:6px;">Demander un retour/remboursement</button>
+                    </form>
+                    {% endif %}
+                    <details style="text-align:left;">
+                        <summary>Voir les articles</summary>
+                        <ul style="text-align:left;">
+                        {% for item in order.items %}
+                            <li>{{ item.product.name }} x {{ item.quantity }}</li>
+                        {% endfor %}
+                        </ul>
+                    </details>
+                </div>
+            {% endfor %}
+            </div>
+        {% else %}
+            <p style="text-align:left;">Aucune commande trouvée.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

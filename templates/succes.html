@@ -1,0 +1,26 @@
+<!-- succes.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Succès - Techstore By Michelle</title>
+    <link rel="stylesheet" href="/static/modern.css">
+</head>
+<body>
+    <nav style="margin-bottom: 24px;">
+        <a href="/">Accueil</a> |
+        <a href="/products">Produits</a>
+        {% if user %}
+            | <a href="/cart">Panier</a>
+            | <a href="/orders">Commandes</a>
+            | <a href="/logout">Déconnexion</a>
+            {% if user.is_admin %}| <a href="/admin">Admin</a>{% endif %}
+        {% else %}
+            | <a href="/login">Connexion</a>
+            | <a href="/signup">Inscription</a>
+        {% endif %}
+    </nav>
+    <h1>Paiement réussi !</h1>
+    <!-- Message de succès ici -->
+</body>
+</html>

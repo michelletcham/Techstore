@@ -1,0 +1,312 @@
+    {% if request.query_params.get('added') %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert" id="added-popup" style="max-width:400px;">
+            <strong>Produit ajouté au panier !</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+        <script>
+        setTimeout(function() {
+            var el = document.getElementById('added-popup');
+            if (el) el.style.display = 'none';
+        }, 5000);
+        </script>
+    {% endif %}
+    <!-- Loader Bootstrap -->
+    <div id="global-loader" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.7);z-index:3000;align-items:center;justify-content:center;">
+        <div class="spinner-border text-primary" role="status" style="width:4rem;height:4rem;">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+    </div>
+    <script>
+    // Affiche le loader lors de la soumission d'un formulaire d'ajout au panier
+    document.querySelectorAll('form[action="/cart/add"]').forEach(function(form) {
+        form.addEventListener('submit', function() {
+            document.getElementById('global-loader').style.display = 'flex';
+        });
+    });
+    // Masque le loader après 2s si jamais il reste affiché (sécurité)
+    setTimeout(function(){
+        var loader = document.getElementById('global-loader');
+        if(loader) loader.style.display = 'none';
+    }, 2000);
+    </script>
+<!-- product_detail.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ product.name }} - Techstore By Michelle</title>
+    <link rel="stylesheet" href="/static/bootstrap_custom.css">
+    <link rel="stylesheet" href="/static/modern.css">
+</head>
+<body>
+    <nav style="margin-bottom: 24px;">
+        <a href="/">Accueil</a> |
+        <a href="/products">Produits</a>
+        {% if user %}
+            <a href="/profile" style="font-weight:bold; background:#eee; padding:6px 18px; border-radius:20px; margin-left:10px;">Profil</a>
+            | <a href="/logout">Déconnexion</a>
+            {% if user.is_admin %}| <a href="/admin">Admin</a>{% endif %}
+        {% else %}
+            | <a href="/login">Connexion</a>
+            | <a href="/signup">Inscription</a>
+        {% endif %}
+    </nav>
+    <a href="javascript:history.back()" style="display:inline-block;margin-bottom:18px;color:#2563eb;text-decoration:underline;font-weight:bold;">&larr; Retour</a>
+    <div class="card product-item" style="max-width:500px;margin:auto;">
+        {% if media and media|length > 0 %}
+        <style>
+        .carousel-container {
+            position: relative;
+            max-width: 100%;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+            background: linear-gradient(120deg, #f8fafc 80%, #e0e7ef 100%);
+        }
+        .carousel-inner {
+            display: flex;
+            transition: transform 0.5s cubic-bezier(.4,1.4,.6,1);
+        }
+        .carousel-item {
+            min-width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .carousel-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.85);
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 2em;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            cursor: pointer;
+            z-index: 2;
+            transition: background 0.2s;
+        }
+        .carousel-arrow:hover {
+            background: #e0e7ef;
+        }
+        .carousel-arrow.left { left: 12px; }
+        .carousel-arrow.right { right: 12px; }
+        .carousel-indicators {
+            position: absolute;
+            left: 50%;
+            bottom: 12px;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 2;
+        }
+        .carousel-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .carousel-indicator.active {
+            background: #2563eb;
+        }
+        .carousel-fullscreen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.92);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .carousel-fullscreen .carousel-item img,
+        .carousel-fullscreen .carousel-item video {
+            max-width: 90vw;
+            max-height: 80vh;
+            border-radius: 8px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+        }
+        .carousel-fullscreen .carousel-arrow { background: #fff; }
+        .carousel-fullscreen .carousel-indicators { bottom: 32px; }
+        .carousel-fullscreen .close-btn {
+            position: absolute;
+            top: 24px;
+            right: 32px;
+            font-size: 2.2em;
+            color: #fff;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 10001;
+        }
+        </style>
+        <div id="carousel" class="carousel-container">
+            <div id="carousel-inner" class="carousel-inner">
+                {% for m in media %}
+                    <div class="carousel-item">
+                        {% if m.media_type == 'image' %}
+                            <img src="{{ m.media_url }}" alt="{{ product.name }}" style="max-width:100%;height:300px;object-fit:contain;cursor:pointer;" onclick="openFullscreen({{ loop.index0 }})">
+                        {% elif m.media_type == 'video' %}
+                            <video src="{{ m.media_url }}" controls style="max-width:100%;height:300px;object-fit:contain;cursor:pointer;" onclick="openFullscreen({{ loop.index0 }})"></video>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            <button id="carousel-prev" class="carousel-arrow left" aria-label="Précédent">&#10094;</button>
+            <button id="carousel-next" class="carousel-arrow right" aria-label="Suivant">&#10095;</button>
+            <div class="carousel-indicators">
+                {% for m in media %}
+                    <span class="carousel-indicator" data-idx="{{ loop.index0 }}"></span>
+                {% endfor %}
+            </div>
+        </div>
+        <script>
+        (function() {
+            const inner = document.getElementById('carousel-inner');
+            const prev = document.getElementById('carousel-prev');
+            const next = document.getElementById('carousel-next');
+            const indicators = document.querySelectorAll('.carousel-indicator');
+            const items = inner ? inner.children.length : 0;
+            let idx = 0;
+            let autoSlide = null;
+            function update() {
+                if (!inner) return;
+                inner.style.transform = `translateX(-${idx * 100}%)`;
+                prev.style.display = idx === 0 ? 'none' : 'block';
+                next.style.display = idx === items-1 ? 'none' : 'block';
+                indicators.forEach((el, i) => el.classList.toggle('active', i === idx));
+            }
+            function goTo(i) {
+                idx = i;
+                update();
+                resetAuto();
+            }
+            if (prev && next && inner) {
+                prev.onclick = function() { if (idx > 0) { idx--; update(); resetAuto(); } };
+                next.onclick = function() { if (idx < items-1) { idx++; update(); resetAuto(); } };
+                indicators.forEach((el, i) => el.onclick = () => goTo(i));
+                update();
+            }
+            function auto() {
+                if (idx < items-1) { idx++; } else { idx = 0; }
+                update();
+            }
+            function resetAuto() {
+                if (autoSlide) clearInterval(autoSlide);
+                autoSlide = setInterval(auto, 4000);
+            }
+            resetAuto();
+            // Plein écran
+            window.openFullscreen = function(startIdx) {
+                let fs = document.createElement('div');
+                fs.className = 'carousel-fullscreen';
+                fs.innerHTML = `
+                    <button class="close-btn" aria-label="Fermer">&times;</button>
+                    <div class="carousel-inner">
+                        ${Array.from(inner.children).map((el, i) => `<div class='carousel-item' style='display:${i===startIdx?'flex':'none'};'>${el.innerHTML}</div>`).join('')}
+                    </div>
+                    <button class="carousel-arrow left">&#10094;</button>
+                    <button class="carousel-arrow right">&#10095;</button>
+                    <div class="carousel-indicators">
+                        ${Array.from(inner.children).map((_,i) => `<span class='carousel-indicator${i===startIdx?' active':''}' data-idx='${i}'></span>`).join('')}
+                    </div>
+                `;
+                document.body.appendChild(fs);
+                let fsIdx = startIdx;
+                const fsItems = fs.querySelectorAll('.carousel-item');
+                const fsPrev = fs.querySelector('.carousel-arrow.left');
+                const fsNext = fs.querySelector('.carousel-arrow.right');
+                const fsInd = fs.querySelectorAll('.carousel-indicator');
+                function fsUpdate() {
+                    fsItems.forEach((el,i) => el.style.display = i===fsIdx?'flex':'none');
+                    fsInd.forEach((el,i) => el.classList.toggle('active', i===fsIdx));
+                    fsPrev.style.display = fsIdx===0?'none':'block';
+                    fsNext.style.display = fsIdx===fsItems.length-1?'none':'block';
+                }
+                fsPrev.onclick = () => { if (fsIdx>0) { fsIdx--; fsUpdate(); } };
+                fsNext.onclick = () => { if (fsIdx<fsItems.length-1) { fsIdx++; fsUpdate(); } };
+                fsInd.forEach((el,i) => el.onclick = () => { fsIdx=i; fsUpdate(); });
+                fs.querySelector('.close-btn').onclick = () => { document.body.removeChild(fs); };
+                fsUpdate();
+            }
+        })();
+        </script>
+        {% elif product.image_url %}
+        <img src="{{ product.image_url }}" alt="{{ product.name }}" style="max-width:100%;height:auto;">
+        {% endif %}
+        <h1>{{ product.name }}</h1>
+        <p>{{ product.description }}</p>
+        <p><strong>Prix :</strong> {{ product.price }} €</p>
+        <p><strong>Stock disponible :</strong> {% if product.stock > 0 %}{{ product.stock }}{% else %}<span style="color:red;font-weight:bold;">Épuisé</span>{% endif %}</p>
+        <p><strong>Évaluation :</strong>
+            {% if product.rating %}
+                <span style="color: #FFD700; font-size: 1.2em;">
+                {% for i in range(1, 6) %}
+                    {% if product.rating >= i %}★{% elif product.rating >= i-0.5 %}☆{% else %}☆{% endif %}
+                {% endfor %}
+                </span>
+                ({{ product.rating }}/5)
+            {% else %}
+                Non évalué
+            {% endif %}
+        </p>
+        <form method="post" action="/cart/add">
+            <input type="hidden" name="product_id" value="{{ product.id }}">
+            <input type="number" name="quantity" value="1" min="1" max="{{ product.stock }}">
+            <button type="submit">Ajouter au panier</button>
+        </form>
+        <hr>
+        <h4>Laisser une évaluation</h4>
+        <form method="post" action="/product/{{ product.id }}/rate">
+            <label for="rating">Note (1 à 5) :</label>
+            <input type="number" id="rating" name="rating" min="1" max="5" required>
+            <br>
+            <label for="comment">Commentaire (optionnel) :</label>
+            <textarea id="comment" name="comment" rows="2" style="width:100%;"></textarea>
+            <button type="submit">Envoyer</button>
+        </form>
+        {% if ratings %}
+        <div style="margin-top:18px;">
+            <h5>Évaluations récentes :</h5>
+            <ul>
+                {% for r in ratings %}
+                <li>
+                    {{ r.rating }} ⭐ - {{ r.created_at.strftime('%d/%m/%Y') if r.created_at else '' }}<br>
+                    {% if r.comment %}<em style="color:#555;">"{{ r.comment }}"</em>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% if user %}
+    <a href="/cart" style="position:fixed;bottom:32px;right:32px;z-index:1000;box-shadow:0 2px 8px #bbb;font-weight:bold;background:#1e90ff;color:#fff;padding:16px 32px;border-radius:32px;text-decoration:none;">🛒 Panier</a>
+    <div id="chat-bubble" onclick="toggleChat()" style="position:fixed;bottom:32px;right:100px;z-index:2000;width:64px;height:64px;background:#4a4e69;border-radius:50%;box-shadow:0 2px 8px #bbb;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <span style="font-size:2.2em;color:#fff;">💬</span>
+    </div>
+    <div id="chat-box" style="display:none;position:fixed;bottom:32px;right:100px;z-index:2001;width:320px;max-width:90vw;background:#fff;border-radius:18px;box-shadow:0 4px 24px #0003;overflow:hidden;">
+        <div style="background:#4a4e69;color:#fff;padding:12px 18px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;">
+            <span>Service client</span>
+            <span style="cursor:pointer;font-size:1.2em;" onclick="toggleChat()">✖</span>
+        </div>
+        <div id="chat-body" style="height:180px;overflow-y:auto;padding:12px 12px 0 12px;background:#f7f8fa;"></div>
+        <div style="display:flex;align-items:center;padding:8px 12px 12px 12px;background:#f7f8fa;">
+            <input id="chat-input" type="text" placeholder="Votre message..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #c9ada7;margin-right:8px;">
+            <button onclick="sendMessage()" style="background:#4a4e69;color:#fff;border:none;border-radius:8px;padding:8px 16px;">Envoyer</button>
+        </div>
+    </div>
+    <script src="/static/chat.js"></script>
+    <style>
+    .chat-message.user { background:#e0e0ff; color:#222; margin:6px 0; padding:7px 12px; border-radius:12px 12px 2px 12px; text-align:right; }
+    .chat-message.support { background:#f2e9e4; color:#4a4e69; margin:6px 0; padding:7px 12px; border-radius:12px 12px 12px 2px; text-align:left; }
+    #chat-body { font-size:1em; }
+    </style>
+    {% endif %}
+</body>
+</html>
